@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "login.h"
+#include "filters.h"
 
 int main() {
     int status = signup("ali", "12345");
