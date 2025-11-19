@@ -1,1 +1,1 @@
-gcc -o bmt.exe bitmapgui.c -I"C:/raylib/raylib/src" -L"C:/raylib/raylib/src" -lraylib -lopengl32 -lgdi32 -lwinmm -luser32
+gcc -o bmt.exe backend.c bitmapgui.c login.c filters.c -I"C:/raylib/raylib/src" -L"C:/raylib/raylib/src" -lraylib -lopengl32 -lgdi32 -lwinmm -luser32
