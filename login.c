@@ -71,13 +71,16 @@ int login(const char *username, const char *password) {
     int found = 0;
 
     while (fgets(line, sizeof(line), fp)) {
-        if (sscanf(line, "%s %s", fileUser, filePass) == 2) {
-            
+        // Remove trailing newline if present
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\n') {
+            line[len - 1] = '\0';
+        }
+
+        if (sscanf(line, "%99s %99s", fileUser, filePass) == 2) {
             if (strcmp(fileUser, username) == 0) {
-
                 char decPass[100];
-                decrypt(decPass, filePass);
-
+                decrypt(decPass, filePass);  // decrypt only the actual string
                 if (strcmp(decPass, password) == 0) {
                     found = 1;
                     break;
@@ -88,8 +91,5 @@ int login(const char *username, const char *password) {
 
     fclose(fp);
 
-    if (found)
-        return LOGIN_OK;
-    else
-        return LOGIN_INVALID_CREDENTIALS;
+    return found ? LOGIN_OK : LOGIN_INVALID_CREDENTIALS;
 }
