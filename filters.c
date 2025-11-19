@@ -392,87 +392,75 @@ void emboss(int height, int width, RGBTRIPLE image[height][width]) {
 }
 
 void rotate_90(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width]) {
-    if (*height == 0 || *width == 0 || *image == NULL) {
-        printf("Invalid input: height = %d, width = %d, image pointer is %s.\n",
-               *height, *width, *image == NULL ? "NULL" : "valid");
-        return;
-    }
-    printf("Old: width=%d, height=%d, padding=%d\n", *width, *height, *padding);
-
     int newHeight = *width;
-    int newWidth = abs(*height);
-
+    int newWidth = *height;
     int newPadding = (4 - (newWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
-    RGBTRIPLE (*temp)[newWidth] = malloc(newHeight * newWidth * sizeof(RGBTRIPLE));
-    if (temp == NULL) {
+    RGBTRIPLE (*rotated)[newWidth] = malloc(newHeight * sizeof(RGBTRIPLE[newWidth]));
+    if (rotated == NULL) {
         printf("Memory allocation failed!\n");
         return;
     }
 
-    // Rotate
-    for (int i = 0; i < abs(*height); i++) {
+    for (int i = 0; i < *height; i++) {
         for (int j = 0; j < *width; j++) {
-            temp[j][newWidth - 1 - i] = (*image)[i][j];
+            rotated[j][newWidth - 1 - i] = (*image)[i][j];
         }
     }
 
     free(*image);
+    *image = (RGBTRIPLE (*)[newWidth])rotated;
 
-    *image = (RGBTRIPLE (*)[newWidth])temp;
-
-    *height = (*height < 0)? -newHeight : newHeight;
+    *height = newHeight;
     *width = newWidth;
     *padding = newPadding;
-    printf("New: width=%d, height=%d, padding=%d\n", *width, *height, *padding);
 }
 
 void rotate_180(int height, int width, RGBTRIPLE image[height][width]) {
     RGBTRIPLE temp;
-    for (int i = 0; i < height/2; i++) {
+    for (int i = 0; i < height / 2; i++) {
         for (int j = 0; j < width; j++) {
             temp = image[i][j];
-            image[i][j] = image[height - 1 - i][width - j - 1];
-            image[height - 1 - i][width - j - 1] = temp;
+            image[i][j] = image[height - 1 - i][width - 1 - j];
+            image[height - 1 - i][width - 1 - j] = temp;
         }
     }
-    return;
+
+    if (height % 2 != 0) { // handle middle row for odd height
+        int middleRow = height / 2;
+        for (int j = 0; j < width / 2; j++) {
+            temp = image[middleRow][j];
+            image[middleRow][j] = image[middleRow][width - 1 - j];
+            image[middleRow][width - 1 - j] = temp;
+        }
+    }
 }
 
 void rotate_270(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width]) {
-    if (*height == 0 || *width == 0 || *image == NULL) {
-        printf("Invalid input: height = %d, width = %d, image pointer is %s.\n",
-               *height, *width, *image == NULL ? "NULL" : "valid");
-        return;
-    }
-
     int newHeight = *width;
-    int newWidth = abs(*height);
-
+    int newWidth = *height;
     int newPadding = (4 - (newWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
-    RGBTRIPLE (*temp)[newWidth] = malloc(newHeight * newWidth * sizeof(RGBTRIPLE));
-    if (temp == NULL) {
+    RGBTRIPLE (*rotated)[newWidth] = malloc(newHeight * sizeof(RGBTRIPLE[newWidth]));
+    if (rotated == NULL) {
         printf("Memory allocation failed!\n");
         return;
     }
 
-    // Rotate
-    for (int i = 0; i < abs(*height); i++) {
+    for (int i = 0; i < *height; i++) {
         for (int j = 0; j < *width; j++) {
-            temp[newHeight - 1 -j][i] = (*image)[i][j];
+            rotated[newHeight - 1 - j][i] = (*image)[i][j];
         }
     }
 
     free(*image);
+    *image = (RGBTRIPLE (*)[newWidth])rotated;
 
-    *image = (RGBTRIPLE (*)[newWidth])temp;
-
-    *height = -newHeight;
+    *height = newHeight;
     *width = newWidth;
     *padding = newPadding;
-
 }
+
 
 void add_border(int height, int width, RGBTRIPLE image[height][width], int border_width, RGBTRIPLE border_color) {
 
@@ -495,4 +483,46 @@ void add_border(int height, int width, RGBTRIPLE image[height][width], int borde
     }
 
     return;
+}
+void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width], int new_width, int new_height, BITMAPFILEHEADER *fileheader, BITMAPINFOHEADER *infoheader)
+{
+    if (new_width <= 0 || new_height <= 0 || new_width > *width || new_height > *height) {
+        printf("Invalid dimensions for resizing.\n");
+        return;
+    }
+
+    // Allocate new pixel array for resized image
+    RGBTRIPLE (*resized)[new_width] = malloc(new_height * sizeof(RGBTRIPLE[new_width]));
+    if (!resized) {
+        printf("Memory allocation failed for resized image.\n");
+        return;
+    }
+
+    // Nearest-neighbor scaling: pick the nearest pixel from original
+    for (int i = 0; i < new_height; i++) {
+        for (int j = 0; j < new_width; j++) {
+            int orig_i = i * (*height) / new_height;
+            int orig_j = j * (*width) / new_width;
+            resized[i][j] = (*image)[orig_i][orig_j];
+        }
+    }
+
+    // Free old pixel array
+    free(*image);
+    *image = (RGBTRIPLE (*)[new_width])resized;
+
+    // Update width and height
+    *width = new_width;
+    *height = new_height;
+
+    // Recalculate padding
+    *padding = (4 - ((*width * sizeof(RGBTRIPLE)) % 4)) % 4;
+
+    // Update infoheader and fileheader
+    infoheader->biWidth = *width;
+    infoheader->biHeight = *height;
+    infoheader->biSizeImage = ((*width * sizeof(RGBTRIPLE)) + *padding) * (*height);
+    fileheader->bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + infoheader->biSizeImage;
+
+    printf("Image resized to %dx%d successfully.\n", new_width, new_height);
 }
