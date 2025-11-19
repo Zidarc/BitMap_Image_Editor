@@ -1,4 +1,5 @@
-//header file for BMP will store in the constructs normally used
+#ifndef BMP_H
+#define BMP_H
 
 #include <stdint.h>
 // https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/f8573df3-a44a-4a50-b070-ac4c3aa78e3c
@@ -58,3 +59,5 @@ typedef struct {
   BYTE rgbtRed;
 } RGBTRIPLE;
 #pragma pack(pop)
+
+#endif // BMP_H

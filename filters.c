@@ -1,528 +1,310 @@
-#include "filters.h"
-#include <math.h>
+#include "./filters.h"
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
-void grayscale(int height, int width, RGBTRIPLE image[height][width]) {
-    
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int sum = 0;
-            sum += image[i][j].rgbtBlue;
-            sum += image[i][j].rgbtGreen;
-            sum += image[i][j].rgbtRed;
+// -------------------- Helper functions --------------------
 
-            image[i][j].rgbtBlue = round((double)sum/(double)3);
-            image[i][j].rgbtGreen = round((double)sum/(double)3);
-            image[i][j].rgbtRed = round((double)sum/(double)3);
-        }
-    }
-
-    return;
+// Clamp value to [0, 255]
+static inline int clamp(int value) {
+    return fmax(fmin(value, 255), 0);
 }
 
-void sepia(int height, int width, RGBTRIPLE image[height][width]) {
+// -------------------- Option 1: Standard filters --------------------
+
+void grayscale(int height, int width, RGBTRIPLE **image) {
     for (int i = 0; i < height; i++) {
-        int sepiaRed, sepiaGreen, sepiaBlue;
         for (int j = 0; j < width; j++) {
+            int avg = round((image[i][j].rgbtRed + image[i][j].rgbtGreen + image[i][j].rgbtBlue) / 3.0);
+            image[i][j].rgbtRed = image[i][j].rgbtGreen = image[i][j].rgbtBlue = avg;
+        }
+    }
+}
 
-            sepiaRed = (0.393 * image[i][j].rgbtRed) + (0.769 * image[i][j].rgbtGreen) + (0.189 * image[i][j].rgbtBlue);
-            if (sepiaRed > 255) {
-                sepiaRed = 255;
-            }
+void sepia(int height, int width, RGBTRIPLE **image) {
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int red = image[i][j].rgbtRed;
+            int green = image[i][j].rgbtGreen;
+            int blue = image[i][j].rgbtBlue;
 
-            sepiaGreen = (0.349 * image[i][j].rgbtRed) + (0.686 * image[i][j].rgbtGreen) + (0.168 * image[i][j].rgbtBlue);
-            if (sepiaGreen > 255) {
-               sepiaGreen = 255;
-            }
-
-            sepiaBlue = (0.272 * image[i][j].rgbtRed) + (0.534 * image[i][j].rgbtGreen) + (0.131 * image[i][j].rgbtBlue);
-            if (sepiaBlue > 255) {
-                sepiaBlue = 255;
-            }
+            int sepiaRed = clamp(round(0.393*red + 0.769*green + 0.189*blue));
+            int sepiaGreen = clamp(round(0.349*red + 0.686*green + 0.168*blue));
+            int sepiaBlue = clamp(round(0.272*red + 0.534*green + 0.131*blue));
 
             image[i][j].rgbtRed = sepiaRed;
             image[i][j].rgbtGreen = sepiaGreen;
             image[i][j].rgbtBlue = sepiaBlue;
         }
     }
-    return;
 }
 
-void reflect(int height, int width, RGBTRIPLE image[height][width]) {
-    RGBTRIPLE temp;
+void reflect(int height, int width, RGBTRIPLE **image) {
     for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width/2; j++) {
-            temp = image[i][j];
+        for (int j = 0; j < width / 2; j++) {
+            RGBTRIPLE temp = image[i][j];
             image[i][j] = image[i][width - 1 - j];
             image[i][width - 1 - j] = temp;
         }
     }
 }
 
-void blur(int height, int width, RGBTRIPLE image[height][width]) {
+void blur(int height, int width, RGBTRIPLE **image) {
+    RGBTRIPLE **temp = malloc(height * sizeof(RGBTRIPLE *));
+    if (!temp) return;
+    for (int i = 0; i < height; i++)
+        temp[i] = malloc(width * sizeof(RGBTRIPLE));
 
-    RGBTRIPLE (*blurred)[width] = malloc(height * sizeof(RGBTRIPLE[width]));
-    if (blurred == NULL) {
-        printf("Memory allocation failed for edged array!\n");
-        return;
-    }
+    int dx[] = {-1, 0, 1};
+    int dy[] = {-1, 0, 1};
+
     for (int i = 0; i < height; i++) {
-
         for (int j = 0; j < width; j++) {
-            int red = 0, green = 0, blue = 0;
-            int count = 0;
-            for (int k = i - 1; k < i + 2; k++) {
-                
-                for (int l = j - 1; l < j + 2; l++) {
-
-                    if (k >= 0 && k < height && l >= 0 && l < width) {
+            int r = 0, g = 0, b = 0, count = 0;
+            for (int di = 0; di < 3; di++) {
+                for (int dj = 0; dj < 3; dj++) {
+                    int ni = i + dx[di], nj = j + dy[dj];
+                    if (ni >= 0 && ni < height && nj >= 0 && nj < width) {
+                        r += image[ni][nj].rgbtRed;
+                        g += image[ni][nj].rgbtGreen;
+                        b += image[ni][nj].rgbtBlue;
                         count++;
-                        red += image[k][l].rgbtRed;
-                        green += image[k][l].rgbtGreen;
-                        blue +=image[k][l].rgbtBlue;
                     }
-                    
-                }
-
-            }
-            blurred[i][j].rgbtRed = round((double)red/(double)count);
-            blurred[i][j].rgbtGreen = round((double)green/(double)count);
-            blurred[i][j].rgbtBlue = round((double)blue/(double)count);
-        }
-
-    }
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j] = blurred[i][j];
-        }
-    }
-    free(blurred);
-    return;
-
-}
-
-void edges(int height, int width, RGBTRIPLE image[height][width]) {
-
-    int Gx[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
-    int Gy[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
-    
-    RGBTRIPLE (*edged)[width] = malloc(height * sizeof(RGBTRIPLE[width]));
-    if (edged == NULL) {
-        printf("Memory allocation failed for edged array!\n");
-        return;
-    }
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            
-            int RedxSum = 0, GreenxSum = 0, BluexSum = 0;
-            int RedySum = 0, GreenySum = 0, BlueySum = 0;
-            for (int k = i - 1; k < i + 2; k++) {
-                for (int l = j - 1; l < j + 2; l++) {
-
-                    if (k < 0 || k >= height || l < 0 || l >= width) {
-                        continue;
-                    }
-
-                    int GRowindex = k - i + 1;
-                    int GColindex = l - j + 1;
-
-                    RedxSum += (Gx[GRowindex][GColindex] * image[k][l].rgbtRed);
-                    GreenxSum += (Gx[GRowindex][GColindex] * image[k][l].rgbtGreen);
-                    BluexSum += (Gx[GRowindex][GColindex] * image[k][l].rgbtBlue);
-
-                    RedySum += (Gy[GRowindex][GColindex] * image[k][l].rgbtRed);
-                    GreenySum += (Gy[GRowindex][GColindex] * image[k][l].rgbtGreen);
-                    BlueySum += (Gy[GRowindex][GColindex] * image[k][l].rgbtBlue);
                 }
             }
-            edged[i][j].rgbtRed = fmin(round(sqrt(RedxSum * RedxSum + RedySum * RedySum)), 255);
-            edged[i][j].rgbtGreen = fmin(round(sqrt(GreenxSum * GreenxSum + GreenySum * GreenySum)), 255);
-            edged[i][j].rgbtBlue = fmin(round(sqrt(BluexSum * BluexSum + BlueySum * BlueySum)), 255);
+            temp[i][j].rgbtRed = round(r / (double)count);
+            temp[i][j].rgbtGreen = round(g / (double)count);
+            temp[i][j].rgbtBlue = round(b / (double)count);
         }
     }
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j] = edged[i][j];
-        }
-    }
-    free(edged);
-    return;
+    for (int i = 0; i < height; i++)
+        memcpy(image[i], temp[i], width * sizeof(RGBTRIPLE));
 
+    for (int i = 0; i < height; i++) free(temp[i]);
+    free(temp);
 }
 
-void adjust_brightness(int height, int width, RGBTRIPLE image[height][width], int brightness) {
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j].rgbtRed = fmax(fmin(image[i][j].rgbtRed + brightness, 255), 0);
-            image[i][j].rgbtGreen = fmax(fmin(image[i][j].rgbtGreen + brightness, 255), 0);
-            image[i][j].rgbtBlue = fmax(fmin(image[i][j].rgbtBlue + brightness, 255), 0);
-        }
-    }
-    return;
-}
-
-void adjust_contrast(int height, int width, RGBTRIPLE image[height][width], float contrast_factor) {
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j].rgbtRed = fmax(fmin((image[i][j].rgbtRed - 128) * contrast_factor + 128, 255), 0);
-            image[i][j].rgbtGreen = fmax(fmin((image[i][j].rgbtGreen - 128) * contrast_factor + 128, 255), 0);
-            image[i][j].rgbtBlue = fmax(fmin((image[i][j].rgbtBlue - 128) * contrast_factor + 128, 255), 0);
-        }
-    }
-    return;
-
-}
-
-void invert_colors(int height, int width, RGBTRIPLE image[height][width]) {
-    for (int i = 0; i < height; i++) {
+void invert_colors(int height, int width, RGBTRIPLE **image) {
+    for (int i = 0; i < height; i++)
         for (int j = 0; j < width; j++) {
             image[i][j].rgbtRed = 255 - image[i][j].rgbtRed;
             image[i][j].rgbtGreen = 255 - image[i][j].rgbtGreen;
             image[i][j].rgbtBlue = 255 - image[i][j].rgbtBlue;
         }
-    }
-    return;
 }
 
-void pixelate(int height, int width, RGBTRIPLE image[height][width], int block_size) {
+void adjust_brightness(int height, int width, RGBTRIPLE **image, int brightness) {
+    for (int i = 0; i < height; i++)
+        for (int j = 0; j < width; j++) {
+            image[i][j].rgbtRed = clamp(image[i][j].rgbtRed + brightness);
+            image[i][j].rgbtGreen = clamp(image[i][j].rgbtGreen + brightness);
+            image[i][j].rgbtBlue = clamp(image[i][j].rgbtBlue + brightness);
+        }
+}
 
+void adjust_contrast(int height, int width, RGBTRIPLE **image, float factor) {
+    for (int i = 0; i < height; i++)
+        for (int j = 0; j < width; j++) {
+            image[i][j].rgbtRed = clamp(round((image[i][j].rgbtRed - 128) * factor + 128));
+            image[i][j].rgbtGreen = clamp(round((image[i][j].rgbtGreen - 128) * factor + 128));
+            image[i][j].rgbtBlue = clamp(round((image[i][j].rgbtBlue - 128) * factor + 128));
+        }
+}
+
+void pixelate(int height, int width, RGBTRIPLE **image, int block_size) {
     for (int i = 0; i < height; i += block_size) {
-
         for (int j = 0; j < width; j += block_size) {
-            int redSum = 0, greenSum = 0, blueSum = 0, block_pixels = 0;
-
-            for (int row = i; row < fmin(i + block_size, height); row++) {
-                for (int col = j; col < fmin(j + block_size, width); col++) {
-                    redSum += image[row][col].rgbtRed;
-                    greenSum += image[row][col].rgbtGreen;
-                    blueSum += image[row][col].rgbtBlue;
-                    block_pixels++;
+            int r = 0, g = 0, b = 0, count = 0;
+            for (int bi = i; bi < fmin(i + block_size, height); bi++)
+                for (int bj = j; bj < fmin(j + block_size, width); bj++) {
+                    r += image[bi][bj].rgbtRed;
+                    g += image[bi][bj].rgbtGreen;
+                    b += image[bi][bj].rgbtBlue;
+                    count++;
                 }
-            }
-
-            int avgRed = fmax(fmin(round((double)redSum / block_pixels), 255), 0);
-            int avgGreen = fmax(fmin(round((double)greenSum / block_pixels), 255), 0);
-            int avgBlue = fmax(fmin(round((double)blueSum / block_pixels), 255), 0);
-
-            for (int row = i; row < fmin(i + block_size, height); row++) {
-                for (int col = j; col < fmin(j + block_size, width); col++) {
-                    image[row][col].rgbtRed = avgRed;
-                    image[row][col].rgbtGreen = avgGreen;
-                    image[row][col].rgbtBlue = avgBlue;
+            int avgR = round(r / (double)count);
+            int avgG = round(g / (double)count);
+            int avgB = round(b / (double)count);
+            for (int bi = i; bi < fmin(i + block_size, height); bi++)
+                for (int bj = j; bj < fmin(j + block_size, width); bj++) {
+                    image[bi][bj].rgbtRed = avgR;
+                    image[bi][bj].rgbtGreen = avgG;
+                    image[bi][bj].rgbtBlue = avgB;
                 }
-            }
         }
-
     }
-
-    return;
 }
 
+void vignette(int height, int width, RGBTRIPLE **image) {
+    int centerX = width / 2;
+    int centerY = height / 2;
+    double max_dist = sqrt(centerX*centerX + centerY*centerY);
 
-void vignette(int height, int width, RGBTRIPLE image[height][width]) {
-    
-    int centerX = width/2;
-    int centerY = height/2;
+    for (int i = 0; i < height; i++)
+        for (int j = 0; j < width; j++) {
+            double dist = sqrt(pow(j - centerX, 2) + pow(i - centerY, 2));
+            double factor = 1.0 - dist / max_dist;
+            image[i][j].rgbtRed = clamp(round(image[i][j].rgbtRed * factor));
+            image[i][j].rgbtGreen = clamp(round(image[i][j].rgbtGreen * factor));
+            image[i][j].rgbtBlue = clamp(round(image[i][j].rgbtBlue * factor));
+        }
+}
 
-    double max_distance = sqrt(pow(centerX, 2) + pow(centerY, 2));
+void sharpen(int height, int width, RGBTRIPLE **image) {
+    int kernel[3][3] = {{0,-1,0},{-1,5,-1},{0,-1,0}};
+    RGBTRIPLE **temp = malloc(height * sizeof(RGBTRIPLE *));
+    for (int i = 0; i < height; i++)
+        temp[i] = malloc(width * sizeof(RGBTRIPLE));
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-
-            double dist = sqrt(pow(centerX - j, 2) + pow(centerY - i, 2));
-            double factor =1.0 -  dist/max_distance;
-            image[i][j].rgbtRed = fmax(fmin(image[i][j].rgbtRed * factor, 255),0);
-            image[i][j].rgbtGreen = fmax(fmin(image[i][j].rgbtGreen * factor, 255),0);
-            image[i][j].rgbtBlue = fmax(fmin(image[i][j].rgbtBlue * factor, 255),0);
-
-        }
-    }
-
-    return;
-
-}
-
-void sharpen(int height, int width, RGBTRIPLE image[height][width]) {
-
-    RGBTRIPLE (*sharpened)[width] = malloc(height * sizeof(RGBTRIPLE[width]));
-    if (sharpened == NULL) {
-        printf("Memory allocation failed for edged array!\n");
-        return;
-    }
-    int kernel[3][3] = 
-    {   {0, -1, 0}, 
-        {-1, 5, -1}, 
-        {0, -1, 0}
-    };
-    for (int i = 0; i < height; i++) {
-
-        for (int j = 0; j < width; j++) {
-            int Red = 0, Blue = 0, Green = 0;
-            for (int k = i - 1; k < i + 2; k++) {
-                for (int l = j - 1; l < j + 2; l++) {
-                    
-                    if (k < 0 || k >= height || l < 0 || l >= width) {
-                        continue;
+            int r = 0, g = 0, b = 0;
+            for (int ki = -1; ki <= 1; ki++)
+                for (int kj = -1; kj <= 1; kj++) {
+                    int ni = i + ki, nj = j + kj;
+                    if (ni >= 0 && ni < height && nj >= 0 && nj < width) {
+                        r += kernel[ki+1][kj+1] * image[ni][nj].rgbtRed;
+                        g += kernel[ki+1][kj+1] * image[ni][nj].rgbtGreen;
+                        b += kernel[ki+1][kj+1] * image[ni][nj].rgbtBlue;
                     }
-
-                    int row = k - i + 1;
-                    int col = l - j + 1;
-
-                    Red += (kernel[row][col] * image[k][l].rgbtRed);
-                    Green += (kernel[row][col] * image[k][l].rgbtGreen);
-                    Blue += (kernel[row][col] * image[k][l].rgbtBlue);
-                    
                 }
-            }
-            sharpened[i][j].rgbtRed = fmax(fmin(Red, 255), 0);
-            sharpened[i][j].rgbtGreen = fmax(fmin(Green, 255), 0);
-            sharpened[i][j].rgbtBlue = fmax(fmin(Blue, 255), 0);
-        }
-
-    }
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j] = sharpened[i][j];
+            temp[i][j].rgbtRed = clamp(r);
+            temp[i][j].rgbtGreen = clamp(g);
+            temp[i][j].rgbtBlue = clamp(b);
         }
     }
-    free(sharpened);
+
+    for (int i = 0; i < height; i++)
+        memcpy(image[i], temp[i], width * sizeof(RGBTRIPLE));
+
+    for (int i = 0; i < height; i++) free(temp[i]);
+    free(temp);
 }
 
-void gaussian_blur(int height, int width, RGBTRIPLE image[height][width]) {
-
-    RGBTRIPLE (*blurred)[width] = malloc(height * sizeof(RGBTRIPLE[width]));
-    if (blurred == NULL) {
-        printf("Memory allocation failed for edged array!\n");
-        return;
-    }
+void gaussian_blur(int height, int width, RGBTRIPLE **image) {
     float kernel[5][5] = {
-        {1.0 / 256, 4.0 / 256, 6.0 / 256, 4.0 / 256, 1.0 / 256},
-        {4.0 / 256, 16.0 / 256, 24.0 / 256, 16.0 / 256, 4.0 / 256},
-        {6.0 / 256, 24.0 / 256, 36.0 / 256, 24.0 / 256, 6.0 / 256},
-        {4.0 / 256, 16.0 / 256, 24.0 / 256, 16.0 / 256, 4.0 / 256},
-        {1.0 / 256, 4.0 / 256, 6.0 / 256, 4.0 / 256, 1.0 / 256}
+        {1,4,6,4,1},{4,16,24,16,4},{6,24,36,24,6},{4,16,24,16,4},{1,4,6,4,1}
     };
+    for (int i=0;i<5;i++) for (int j=0;j<5;j++) kernel[i][j]/=256.0;
 
-    for (int i = 0; i < height; i++) {
+    RGBTRIPLE **temp = malloc(height * sizeof(RGBTRIPLE *));
+    for (int i = 0; i < height; i++)
+        temp[i] = malloc(width * sizeof(RGBTRIPLE));
+
+    for (int i = 0; i < height; i++)
         for (int j = 0; j < width; j++) {
-            float Red = 0.0, Green = 0.0, Blue = 0.0;
-            for (int k = i - 2; k < i + 3; k++) {
-                for (int l = j - 2; l < j + 3; l++) {
-                    
-                    if (k < 0 || k >= height || l < 0 || l >= width) {
-                        continue;
+            double r=0,g=0,b=0;
+            for (int ki=-2;ki<=2;ki++)
+                for (int kj=-2;kj<=2;kj++) {
+                    int ni = i+ki, nj = j+kj;
+                    if (ni>=0 && ni<height && nj>=0 && nj<width){
+                        r += kernel[ki+2][kj+2]*image[ni][nj].rgbtRed;
+                        g += kernel[ki+2][kj+2]*image[ni][nj].rgbtGreen;
+                        b += kernel[ki+2][kj+2]*image[ni][nj].rgbtBlue;
                     }
-
-                    int row = k - i + 2;
-                    int col = l - j + 2;
-
-                    Red += (kernel[row][col] * image[k][l].rgbtRed);
-                    Green += (kernel[row][col] * image[k][l].rgbtGreen);
-                    Blue += (kernel[row][col] * image[k][l].rgbtBlue);
-                    
                 }
-            }
-            blurred[i][j].rgbtRed = fmax(fmin(round(Red), 255), 0);
-            blurred[i][j].rgbtGreen = fmax(fmin(round(Green), 255), 0);
-            blurred[i][j].rgbtBlue = fmax(fmin(round(Blue), 255), 0);
+            temp[i][j].rgbtRed = clamp(round(r));
+            temp[i][j].rgbtGreen = clamp(round(g));
+            temp[i][j].rgbtBlue = clamp(round(b));
         }
-    }
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j] = blurred[i][j];
-        }
-    }
-    free(blurred);
+    for (int i=0;i<height;i++) memcpy(image[i], temp[i], width*sizeof(RGBTRIPLE));
+    for (int i=0;i<height;i++) free(temp[i]);
+    free(temp);
 }
 
-void emboss(int height, int width, RGBTRIPLE image[height][width]) {
-    
-    RGBTRIPLE (*embossed)[width] = malloc(height * sizeof(RGBTRIPLE[width]));
-    if (embossed == NULL) {
-        printf("Memory allocation failed for edged array!\n");
-        return;
-    }
-    int kernel[3][3] = {
-        {-2, -1,  0},
-        {-1,  1,  1},
-        { 0,  1,  2}
-    };
+void emboss(int height, int width, RGBTRIPLE **image) {
+    int kernel[3][3] = {{-2,-1,0},{-1,1,1},{0,1,2}};
+    RGBTRIPLE **temp = malloc(height * sizeof(RGBTRIPLE *));
+    for (int i=0;i<height;i++) temp[i]=malloc(width*sizeof(RGBTRIPLE));
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            float Red = 0.0, Green = 0.0, Blue = 0.0;
-            
-            for (int k = i - 1; k < i + 2; k++) {
-                for (int l = j - 1; l < j + 2; l++) {
-                    if (k < 0 || k >= height || l < 0 || l >= width) {
-                        continue;
+    for (int i=0;i<height;i++)
+        for (int j=0;j<width;j++) {
+            int r=0,g=0,b=0;
+            for (int ki=-1;ki<=1;ki++)
+                for (int kj=-1;kj<=1;kj++){
+                    int ni=i+ki,nj=j+kj;
+                    if(ni>=0 && ni<height && nj>=0 && nj<width){
+                        r+=kernel[ki+1][kj+1]*image[ni][nj].rgbtRed;
+                        g+=kernel[ki+1][kj+1]*image[ni][nj].rgbtGreen;
+                        b+=kernel[ki+1][kj+1]*image[ni][nj].rgbtBlue;
                     }
-
-                    int row = k - i + 1;
-                    int col = l - j + 1;
-
-                    Red += (kernel[row][col] * image[k][l].rgbtRed);
-                    Green += (kernel[row][col] * image[k][l].rgbtGreen);
-                    Blue += (kernel[row][col] * image[k][l].rgbtBlue);
-                    
                 }
-            }
-            embossed[i][j].rgbtRed = fmax(fmin(round(Red), 255), 0);
-            embossed[i][j].rgbtGreen = fmax(fmin(round(Green), 255), 0);
-            embossed[i][j].rgbtBlue = fmax(fmin(round(Blue), 255), 0);
+            temp[i][j].rgbtRed = clamp(round(r));
+            temp[i][j].rgbtGreen = clamp(round(g));
+            temp[i][j].rgbtBlue = clamp(round(b));
         }
-    }
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            image[i][j] = embossed[i][j];
-        }
-    }
-    free(embossed);
-    return;
+    for(int i=0;i<height;i++) memcpy(image[i], temp[i], width*sizeof(RGBTRIPLE));
+    for(int i=0;i<height;i++) free(temp[i]);
+    free(temp);
 }
+
+void add_border(int height, int width, RGBTRIPLE **image, int border_width, RGBTRIPLE border_color) {
+    for (int i=0;i<height;i++)
+        for (int j=0;j<width;j++)
+            if(i<border_width || i>=height-border_width || j<border_width || j>=width-border_width)
+                image[i][j]=border_color;
+}
+
+// -------------------- Option 3: Resize / Rotation --------------------
 
 void rotate_90(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width]) {
-    int newHeight = *width;
-    int newWidth = *height;
-    int newPadding = (4 - (newWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-
-    RGBTRIPLE (*rotated)[newWidth] = malloc(newHeight * sizeof(RGBTRIPLE[newWidth]));
-    if (rotated == NULL) {
-        printf("Memory allocation failed!\n");
-        return;
-    }
-
-    for (int i = 0; i < *height; i++) {
-        for (int j = 0; j < *width; j++) {
-            rotated[j][newWidth - 1 - i] = (*image)[i][j];
-        }
-    }
-
+    int newH = *width, newW = *height;
+    int newP = (4 - (newW*sizeof(RGBTRIPLE))%4)%4;
+    RGBTRIPLE (*rot)[newW] = malloc(newH * sizeof(RGBTRIPLE[newW]));
+    for(int i=0;i<*height;i++)
+        for(int j=0;j<*width;j++)
+            rot[j][newW-1-i]=(*image)[i][j];
     free(*image);
-    *image = (RGBTRIPLE (*)[newWidth])rotated;
-
-    *height = newHeight;
-    *width = newWidth;
-    *padding = newPadding;
+    *image = (RGBTRIPLE (*)[newW])rot;
+    *height=newH; *width=newW; *padding=newP;
 }
 
-void rotate_180(int height, int width, RGBTRIPLE image[height][width]) {
-    RGBTRIPLE temp;
-    for (int i = 0; i < height / 2; i++) {
-        for (int j = 0; j < width; j++) {
-            temp = image[i][j];
-            image[i][j] = image[height - 1 - i][width - 1 - j];
-            image[height - 1 - i][width - 1 - j] = temp;
+void rotate_180(int height, int width, RGBTRIPLE **image) {
+    for(int i=0;i<height/2;i++)
+        for(int j=0;j<width;j++){
+            RGBTRIPLE temp=image[i][j];
+            image[i][j]=image[height-1-i][width-1-j];
+            image[height-1-i][width-1-j]=temp;
         }
-    }
-
-    if (height % 2 != 0) { // handle middle row for odd height
-        int middleRow = height / 2;
-        for (int j = 0; j < width / 2; j++) {
-            temp = image[middleRow][j];
-            image[middleRow][j] = image[middleRow][width - 1 - j];
-            image[middleRow][width - 1 - j] = temp;
+    if(height%2!=0){
+        int row=height/2;
+        for(int j=0;j<width/2;j++){
+            RGBTRIPLE temp=image[row][j];
+            image[row][j]=image[row][width-1-j];
+            image[row][width-1-j]=temp;
         }
     }
 }
 
 void rotate_270(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width]) {
-    int newHeight = *width;
-    int newWidth = *height;
-    int newPadding = (4 - (newWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-
-    RGBTRIPLE (*rotated)[newWidth] = malloc(newHeight * sizeof(RGBTRIPLE[newWidth]));
-    if (rotated == NULL) {
-        printf("Memory allocation failed!\n");
-        return;
-    }
-
-    for (int i = 0; i < *height; i++) {
-        for (int j = 0; j < *width; j++) {
-            rotated[newHeight - 1 - j][i] = (*image)[i][j];
-        }
-    }
-
+    int newH=*width, newW=*height;
+    int newP=(4-(newW*sizeof(RGBTRIPLE))%4)%4;
+    RGBTRIPLE (*rot)[newW]=malloc(newH*sizeof(RGBTRIPLE[newW]));
+    for(int i=0;i<*height;i++)
+        for(int j=0;j<*width;j++)
+            rot[newH-1-j][i]=(*image)[i][j];
     free(*image);
-    *image = (RGBTRIPLE (*)[newWidth])rotated;
-
-    *height = newHeight;
-    *width = newWidth;
-    *padding = newPadding;
+    *image=(RGBTRIPLE (*)[newW])rot;
+    *height=newH; *width=newW; *padding=newP;
 }
 
-
-void add_border(int height, int width, RGBTRIPLE image[height][width], int border_width, RGBTRIPLE border_color) {
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < border_width; j++) {
-            image[i][j] = border_color;
+void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width],
+            int newW, int newH, BITMAPFILEHEADER *bf, BITMAPINFOHEADER *bi){
+    RGBTRIPLE (*resized)[newW]=malloc(newH*sizeof(RGBTRIPLE[newW]));
+    for(int i=0;i<newH;i++)
+        for(int j=0;j<newW;j++){
+            int orig_i=i*(*height)/newH;
+            int orig_j=j*(*width)/newW;
+            resized[i][j]=(*image)[orig_i][orig_j];
         }
-        for (int j = width - border_width ; j < width; j++) {
-            image[i][j] = border_color;
-        }
-    }
-
-    for (int j = border_width; j < width - border_width; j++) {
-        for (int i = 0; i < border_width; i++) {
-            image[i][j] = border_color;
-        }
-        for (int i = height - border_width; i < height; i++) {
-            image[i][j] = border_color;
-        }
-    }
-
-    return;
-}
-void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width], int new_width, int new_height, BITMAPFILEHEADER *fileheader, BITMAPINFOHEADER *infoheader)
-{
-    if (new_width <= 0 || new_height <= 0 || new_width > *width || new_height > *height) {
-        printf("Invalid dimensions for resizing.\n");
-        return;
-    }
-
-    // Allocate new pixel array for resized image
-    RGBTRIPLE (*resized)[new_width] = malloc(new_height * sizeof(RGBTRIPLE[new_width]));
-    if (!resized) {
-        printf("Memory allocation failed for resized image.\n");
-        return;
-    }
-
-    // Nearest-neighbor scaling: pick the nearest pixel from original
-    for (int i = 0; i < new_height; i++) {
-        for (int j = 0; j < new_width; j++) {
-            int orig_i = i * (*height) / new_height;
-            int orig_j = j * (*width) / new_width;
-            resized[i][j] = (*image)[orig_i][orig_j];
-        }
-    }
-
-    // Free old pixel array
     free(*image);
-    *image = (RGBTRIPLE (*)[new_width])resized;
-
-    // Update width and height
-    *width = new_width;
-    *height = new_height;
-
-    // Recalculate padding
-    *padding = (4 - ((*width * sizeof(RGBTRIPLE)) % 4)) % 4;
-
-    // Update infoheader and fileheader
-    infoheader->biWidth = *width;
-    infoheader->biHeight = *height;
-    infoheader->biSizeImage = ((*width * sizeof(RGBTRIPLE)) + *padding) * (*height);
-    fileheader->bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + infoheader->biSizeImage;
-
-    printf("Image resized to %dx%d successfully.\n", new_width, new_height);
+    *image=(RGBTRIPLE (*)[newW])resized;
+    *height=newH; *width=newW;
+    *padding=(4-((newW*sizeof(RGBTRIPLE))%4))%4;
+    bi->biWidth=*width; bi->biHeight=*height;
+    bi->biSizeImage=(*height)*((*width)*sizeof(RGBTRIPLE)+*padding);
+    bf->bfSize=sizeof(BITMAPFILEHEADER)+sizeof(BITMAPINFOHEADER)+bi->biSizeImage;
 }
