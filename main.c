@@ -96,15 +96,16 @@ int main() {
     printf("15. Rotate 180\n");
     printf("16. Rotate 270\n");
     printf("17. Add Border\n");
+    printf("18. Resize");
     int choice;
     do {
         printf("Enter your choice (1-17): ");
         scanf("%d", &choice);
         getchar();
-        if (choice < 0 || choice > 17) {
+        if (choice < 0 || choice > 18) {
             printf("Invalid choice, try again.\n");
         }
-    } while(choice < 0 || choice > 17);
+    } while(choice < 0 || choice > 18);
 
     // Declarations for user input
     int brightness;
@@ -211,6 +212,15 @@ int main() {
 
             add_border(height, width, pixelArray, 5, border_colour);
             break;
+        case 18:
+            {
+                int new_width, new_height;
+                printf("Enter new width: ");
+                scanf("%d", &new_width);
+                printf("Enter new height: ");
+                scanf("%d", &new_height);
+                resize(&infoheader.biHeight, &infoheader.biWidth, &padding, &pixelArray, new_width, new_height, &fileheader, &infoheader);
+            }
     }
 
     if (choice == 14 || choice == 16) {

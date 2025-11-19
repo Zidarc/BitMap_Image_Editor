@@ -50,3 +50,5 @@ void rotate_270(int *height, int *width, int *padding, RGBTRIPLE (**image)[*widt
 
 //17. Add border to image
 void add_border(int height, int width, RGBTRIPLE image[height][width], int border_width, RGBTRIPLE border_color);
+
+void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width], int new_width, int new_height, BITMAPFILEHEADER *fileheader, BITMAPINFOHEADER *infoheader);
