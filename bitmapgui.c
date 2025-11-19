@@ -576,27 +576,49 @@ int main(void) {
             historyVisible = !historyVisible;
         }
 
-        // Edit dropdown (expanded)
-        DrawText("Edit options:", leftPanel.x + 8, leftPanel.y + 250, 12, BLACK);
-        // Clicking this rectangle toggles the dropdown
-        Rectangle ddRect = {leftPanel.x + 8, leftPanel.y + 270, leftPanel.width - 16, 28};
-        DrawRectangleRec(ddRect, LIGHTGRAY);
-        DrawText(editOptions[selectedEditOption], ddRect.x + 8, ddRect.y + 6, 12, BLACK);
-        if (CheckCollisionPointRec(GetMousePosition(), ddRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            showEditDropdown = !showEditDropdown;
-        }
-        if (showEditDropdown) {
-            for (int i=0;i<editOptionsCount;i++){
-                Rectangle opt = {ddRect.x, ddRect.y + 28*(i+1), ddRect.width, 28};
-                DrawRectangleRec(opt, Fade(LIGHTGRAY, 0.85f));
-                DrawText(editOptions[i], opt.x + 8, opt.y + 6, 12, BLACK);
-                if (CheckCollisionPointRec(GetMousePosition(), opt) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    selectedEditOption = i;
-                    showEditDropdown = false;
-                    // special: if option requires immediate popup (like Resize) we can show fields below
-                }
-            }
-        }
+        // Edit Options (Scrollable)
+		DrawText("Edit options:", leftPanel.x + 8, leftPanel.y + 250, 12, BLACK);
+
+		// Scroll panel area
+		Rectangle view = {
+    		leftPanel.x + 8,
+    		leftPanel.y + 270,
+    		leftPanel.width - 16,
+    		150  // visible height (fits ~5 items)
+		};
+
+		// Full content height (all items)
+		Rectangle content = {
+    		0,
+    		0,
+    		view.width - 20,         // width inside scroll
+    		editOptionsCount * 28    // each row is 28 pixels tall
+		};
+
+		static Vector2 scroll = {0};
+
+		// Draw scroll panel
+		GuiScrollPanel(view, NULL, content, &scroll, NULL);
+
+		// Clip to scroll view
+		BeginScissorMode(view.x, view.y, view.width, view.height);
+
+		// Draw items inside scrolled region
+		for (int i = 0; i < editOptionsCount; i++) {
+    		Rectangle item = {
+        	view.x,
+        	view.y + i * 28 + scroll.y,   // apply scroll offset
+        	view.width,
+        	28
+    	};
+
+    if (GuiButton(item, editOptions[i])) {
+        selectedEditOption = i;
+    }
+}
+
+EndScissorMode();
+
 
         // Resize inputs
         DrawText("Resize (W x H):", leftPanel.x + 8, leftPanel.y + 420, 12, BLACK);
