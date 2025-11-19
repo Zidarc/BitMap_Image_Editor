@@ -87,7 +87,6 @@ static const char *editOptions[] = {
     "Blur (not yet)",
     "Sharpen (not yet)",
     "Brightness/Contrast (not yet)",
-    "Save Image"
 };
 static const int editOptionsCount = sizeof(editOptions)/sizeof(editOptions[0]);
 static int selectedEditOption = 0;
@@ -423,16 +422,6 @@ static void DoLoadImage() {
     SetStatus("Loaded image: %s (%dx%d)", pathInput, currentImage.w, currentImage.h);
 }
 
-static void DoSaveImage() {
-    if (!currentImage.pixels) { SetError("No image to save."); return; }
-    if (strlen(pathInput) == 0) { SetError("Enter a path to save the image in the input box."); return; }
-    if (!SaveImageToPath(pathInput, &currentImage)) {
-        SetError("Failed to save image to:\n%s", pathInput);
-        return;
-    }
-    SetStatus("Saved image to %s", pathInput);
-}
-
 static void ApplyEditOption(int option) {
     if (!currentImage.pixels) { SetError("Load an image first."); return; }
     // Save state before operation for undo
@@ -478,11 +467,6 @@ static void ApplyEditOption(int option) {
             // pop last history entry because no change actually happened
             if (history.size > 0) { FreeImageData(&history.items[history.size-1]); history.size--; history.currentIndex = history.size-1; }
             return;
-        case 11: // Save Image
-            DoSaveImage();
-            // pop history entry added earlier since save doesn't change pixels
-            if (history.size > 0) { FreeImageData(&history.items[history.size-1]); history.size--; history.currentIndex = history.size-1; }
-            return;
         default:
             SetError("Unknown operation.");
             return;
@@ -490,36 +474,6 @@ static void ApplyEditOption(int option) {
     // After changing pixels, update texture
     UnloadCurrentTexture();
     UpdateTextureFromImageData(&currentImage);
-}
-
-static void DoUndo() {
-    if (!HistoryCanUndo(&history)) {
-        SetError("Nothing to undo.");
-        return;
-    }
-    ImageData tmp = {0,0,NULL};
-    if (HistoryUndo(&history, &tmp)) {
-        if (currentImage.pixels) free(currentImage.pixels);
-        currentImage = tmp;
-        UnloadCurrentTexture();
-        UpdateTextureFromImageData(&currentImage);
-        SetStatus("Undo -> %dx%d", currentImage.w, currentImage.h);
-    }
-}
-
-static void DoRedo() {
-    if (!HistoryCanRedo(&history)) {
-        SetError("Nothing to redo.");
-        return;
-    }
-    ImageData tmp = {0,0,NULL};
-    if (HistoryRedo(&history, &tmp)) {
-        if (currentImage.pixels) free(currentImage.pixels);
-        currentImage = tmp;
-        UnloadCurrentTexture();
-        UpdateTextureFromImageData(&currentImage);
-        SetStatus("Redo -> %dx%d", currentImage.w, currentImage.h);
-    }
 }
 
 // --------------------- UI Drawing ---------------------
@@ -559,18 +513,6 @@ int main(void) {
         if (GuiButton((Rectangle){leftPanel.x + 8, leftPanel.y + 92, leftPanel.width - 16, 28}, "Load Image")) {
             DoLoadImage();
         }
-        if (GuiButton((Rectangle){leftPanel.x + 8, leftPanel.y + 128, leftPanel.width - 16, 28}, "Save Image")) {
-            DoSaveImage();
-        }
-
-        // Undo/Redo
-        if (GuiButton((Rectangle){leftPanel.x + 8, leftPanel.y + 170, (leftPanel.width - 24)/2, 28}, "Undo")) {
-            DoUndo();
-        }
-        if (GuiButton((Rectangle){leftPanel.x + 16 + (leftPanel.width - 24)/2, leftPanel.y + 170, (leftPanel.width - 24)/2, 28}, "Redo")) {
-            DoRedo();
-        }
-
         // History toggle
         if (GuiButton((Rectangle){leftPanel.x + 8, leftPanel.y + 208, leftPanel.width - 16, 28}, historyVisible ? "Hide History" : "Show History")) {
             historyVisible = !historyVisible;
@@ -603,19 +545,33 @@ int main(void) {
 		// Clip to scroll view
 		BeginScissorMode(view.x, view.y, view.width, view.height);
 
-		// Draw items inside scrolled region
 		for (int i = 0; i < editOptionsCount; i++) {
-    		Rectangle item = {
-        	view.x,
-        	view.y + i * 28 + scroll.y,   // apply scroll offset
-        	view.width,
-        	28
-    	};
+    Rectangle item = {
+        view.x,
+        view.y + i * 28 + scroll.y,   // apply scroll offset
+        view.width,
+        28
+    };
 
-    if (GuiButton(item, editOptions[i])) {
-        selectedEditOption = i;
+    bool isSelected = (i == selectedEditOption);
+
+    if (isSelected) {
+        DrawRectangleRec(item, BLACK);
+        DrawText(editOptions[i], item.x + 4, item.y + 6, 12, WHITE);
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
+            CheckCollisionPointRec(GetMousePosition(), item)) {
+            selectedEditOption = i;
+        }
+    } else {
+        if (GuiButton(item, editOptions[i])) {
+            selectedEditOption = i;
+        }
     }
 }
+
+EndScissorMode();
+
 
 EndScissorMode();
 
