@@ -408,20 +408,33 @@ static void DoLoadImage() {
         SetError("Please enter a file path or URL in the input box.");
         return;
     }
+
+    // Store the pathInput into custom infile/outfile variables
+    char infile[100] = "./Images/desert.bmp";
+    char outfile[100] = "./images/outsample1.bmp";
+
+    // Copy user-entered path into infile (and optionally outfile)
+    strncpy(infile, pathInput, sizeof(infile) - 1);
+    infile[sizeof(infile) - 1] = '\0';  // ensure null-terminated
+
+    snprintf(outfile, sizeof(outfile), "./images/outsample_%s", strrchr(infile, '/') ? strrchr(infile, '/') + 1 : infile);
+
     ImageData newImg = {0,0,NULL};
-    if (!LoadImageFromPath(pathInput, &newImg)) {
-        SetError("Failed to load image from:\n%s", pathInput);
+    if (!LoadImageFromPath(infile, &newImg)) {   // use infile here
+        SetError("Failed to load image from:\n%s", infile);
         return;
     }
-    // unload current texture and image
+
+
     if (currentImage.pixels) free(currentImage.pixels);
     currentImage = newImg;
     UnloadCurrentTexture();
     UpdateTextureFromImageData(&currentImage);
-    // push to history
-    HistoryPush(&history, &currentImage);
-    SetStatus("Loaded image: %s (%dx%d)", pathInput, currentImage.w, currentImage.h);
+
+    SetStatus("Loaded image: %s (%dx%d)", infile, currentImage.w, currentImage.h);
+
 }
+
 
 static void DoSaveImage() {
     if (!currentImage.pixels) { SetError("No image to save."); return; }
