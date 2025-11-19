@@ -171,11 +171,14 @@ int main() {
                 BeginScissorMode(filterView.x, filterView.y, filterView.width, filterView.height);
                 for (int i = 0; i < filterCount; i++) {
                     Rectangle item = { filterView.x, filterView.y + i*40 + (int)filterScroll.y, filterView.width, 40 };
-                    bool isSelected = (i == selectedFilter);
-                    if (isSelected) DrawRectangleRec(item, DARKGRAY);
+
                     if (GuiButton(item, filterOptions[i])) {
                         selectedFilter = i;
                         selectedTemplate = -1; // deselect template
+                    }
+
+                    if (i == selectedFilter) {
+                        DrawRectangleRec(item, Fade(DARKGRAY, 0.4f)); // highlight overlay
                     }
                 }
                 EndScissorMode();
@@ -190,13 +193,18 @@ int main() {
                 BeginScissorMode(tempView.x, tempView.y, tempView.width, tempView.height);
                 for (int i = 0; i < templateCount; i++) {
                     Rectangle item = { tempView.x, tempView.y + i*40 + (int)tempScroll.y, tempView.width, 40 };
-                    if (i == selectedTemplate) DrawRectangleRec(item, DARKGRAY);
+
                     if (GuiButton(item, templateOptions[i])) {
                         selectedTemplate = i;
                         selectedFilter = -1; // deselect filter
                     }
+
+                    if (i == selectedTemplate) {
+                        DrawRectangleRec(item, Fade(DARKGRAY, 0.4f)); // highlight overlay
+                    }
                 }
                 EndScissorMode();
+
                 break;
             }
         }
