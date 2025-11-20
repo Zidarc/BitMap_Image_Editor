@@ -23,9 +23,9 @@ static int rightTextBoxActive = 0;
 
 // ---------------------- Filters/Templates ----------------------
 static const char *filterOptions[] = {
-    "Resize", "Rotate 90°", "Rotate 180°", "Flip Horizontal",
+    "Rotate 90°", "Rotate 180°", "Flip Horizontal",
     "Flip Vertical", "Grayscale", "Invert", "Sepia",
-    "Blur", "Edges", "Brightness", "Contrast", "Pixelate"
+    "Blur", "Contrast", "Pixelate"
 };
 static int filterCount = sizeof(filterOptions)/sizeof(filterOptions[0]);
 static int selectedFilter = -1;
@@ -172,7 +172,7 @@ int main() {
                 if(GuiButton((Rectangle){leftPanel.x+8,leftPanel.y+110,leftPanel.width-16,30},"Apply")){
                     brightnessValue = atoi(brightnessInput);
                     backend_set_brightness(brightnessValue);
-                    backend_apply_filter(10); // Brightness
+                    backend_apply_filter(11); // Brightness
                 }
 
                 // Resize
@@ -188,7 +188,7 @@ int main() {
                     newHeight = atoi(newHeightInput);
                     if(newWidth>0 && newHeight>0){
                         backend_set_resize(newWidth,newHeight);
-                        backend_apply_filter(0); // Resize
+                        backend_apply_filter(13); // Resize
                     }
                 }
 
