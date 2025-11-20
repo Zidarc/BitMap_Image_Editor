@@ -16,7 +16,7 @@ void blur(int height, int width, RGBTRIPLE **image);
 void edges(int height, int width, RGBTRIPLE **image);
 
 //6. Adjust brightness of the image
-void adjust_brightness(int height, int width, RGBTRIPLE **image, int brightness);
+//void adjust_brightness(int height, int width, RGBTRIPLE **image, int brightness);
 
 //7. Adjust contrast of the image
 void adjust_contrast(int height, int width, RGBTRIPLE **image, float contrast_factor);
@@ -54,5 +54,7 @@ void add_border(int height, int width, RGBTRIPLE **image, int border_width, RGBT
 // filters.h
 void rotate_90(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width]);
 void rotate_270(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width]);
-void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width],
-            int newW, int newH, BITMAPFILEHEADER *bf, BITMAPINFOHEADER *bi);
+//void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width],
+            //int newW, int newH, BITMAPFILEHEADER *bf, BITMAPINFOHEADER *bi);
+void flip_vertical(int height, int width, RGBTRIPLE **image);
+void flip_horizontal(int height, int width, RGBTRIPLE **image); // if needed

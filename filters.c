@@ -308,3 +308,31 @@ void resize(int *height, int *width, int *padding, RGBTRIPLE (**image)[*width],
     bi->biSizeImage=(*height)*((*width)*sizeof(RGBTRIPLE)+*padding);
     bf->bfSize=sizeof(BITMAPFILEHEADER)+sizeof(BITMAPINFOHEADER)+bi->biSizeImage;
 }
+
+void flip_vertical(int height, int width, RGBTRIPLE **image) {
+    for(int j = 0; j < width; j++) {
+        for(int i = 0; i < height / 2; i++) {
+            RGBTRIPLE temp = image[i][j];
+            image[i][j] = image[height-1-i][j];
+            image[height-1-i][j] = temp;
+        }
+    }
+}
+
+void flip_horizontal(int height, int width, RGBTRIPLE **image) {
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width / 2; j++) {
+            RGBTRIPLE temp = image[i][j];
+            image[i][j] = image[i][width-1-j];
+            image[i][width-1-j] = temp;
+        }
+    }
+}
+
+// edges filter placeholder
+void edges(int height, int width, RGBTRIPLE **image) {
+    // Currently does nothing. Remove or implement later.
+    (void)height; // avoid unused parameter warning
+    (void)width;
+    (void)image;
+}

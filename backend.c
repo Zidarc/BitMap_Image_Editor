@@ -14,9 +14,26 @@ static RGBTRIPLE **pixelArray = NULL;
 static int imgWidth = 0;
 static int imgHeight = 0;
 
+// Adjustable parameters (can be set via GUI later)
+static int brightness_value = 50;
+static float contrast_factor = 1.2f;
+static int pixelate_block = 10;
+static int resize_width = 0;   // set >0 to enable resize
+static int resize_height = 0;
+
+// Add near the top with the static variables
+void backend_set_brightness(int value) {
+    brightness_value = value;
+}
+
+void backend_set_resize(int newWidth, int newHeight) {
+    resize_width = newWidth;
+    resize_height = newHeight;
+}
+
 
 // ------------------------------------------------------
-//  Load BMP image
+// Load BMP image
 // ------------------------------------------------------
 int backend_load_image(const char *filepath)
 {
@@ -36,9 +53,7 @@ int backend_load_image(const char *filepath)
     imgWidth = infoheader.biWidth;
     imgHeight = abs(infoheader.biHeight);
 
-    // -------------------------------
-    // Correct allocation for 2D array
-    // -------------------------------
+    // Allocate 2D pixel array
     pixelArray = malloc(imgHeight * sizeof(RGBTRIPLE *));
     if (!pixelArray) { fclose(readfile); return 0; }
 
@@ -60,9 +75,8 @@ int backend_load_image(const char *filepath)
     return 1;
 }
 
-
 // ------------------------------------------------------
-//  Save BMP image
+// Save BMP image
 // ------------------------------------------------------
 int backend_save_image(const char *outfile)
 {
@@ -89,21 +103,38 @@ int backend_save_image(const char *outfile)
     return 1;
 }
 
-
 // ------------------------------------------------------
-//  Apply filter using filters.c
+// Apply filter using filters.c
 // ------------------------------------------------------
 void backend_apply_filter(int filterID)
 {
     if (!pixelArray) return;
 
+    int padding = (4 - (imgWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+
     switch (filterID)
     {
-        case 0: /* Resize */ break;  // will require user input
-        case 1: /* Rotate 90° */ break;
-        case 2: /* Rotate 180° */ break;
-        case 3: /* Flip Horizontal */ break;
-        case 4: /* Flip Vertical */ break;
+        case 0: /* Resize */
+            if (resize_width > 0 && resize_height > 0)
+                resize(&imgHeight, &imgWidth, &padding, (RGBTRIPLE (**)[imgWidth])pixelArray,
+                       resize_width, resize_height, &fileheader, &infoheader);
+            break;
+
+        case 1: /* Rotate 90° */
+            rotate_90(&imgHeight, &imgWidth, &padding, (RGBTRIPLE (**)[imgWidth])pixelArray);
+            break;
+
+        case 2: /* Rotate 180° */
+            rotate_180(imgHeight, imgWidth, pixelArray);
+            break;
+
+        case 3: /* Flip Horizontal */
+            reflect(imgHeight, imgWidth, pixelArray);
+            break;
+
+        case 4: /* Flip Vertical */
+            flip_vertical(imgHeight, imgWidth, pixelArray); // implement in filters.c
+            break;
 
         case 5: /* Grayscale */
             grayscale(imgHeight, imgWidth, pixelArray);
@@ -113,24 +144,57 @@ void backend_apply_filter(int filterID)
             invert_colors(imgHeight, imgWidth, pixelArray);
             break;
 
-        // Other filters like blur, sepia, brightness etc. are skipped until GUI can provide input
-        default: break;
+        case 7: /* Sepia */
+            sepia(imgHeight, imgWidth, pixelArray);
+            break;
+
+        case 8: /* Blur */
+            blur(imgHeight, imgWidth, pixelArray);
+            break;
+
+        case 9: /* Edges */
+            edges(imgHeight, imgWidth, pixelArray); // optional
+            break;
+
+        case 10: /* Brightness */
+            adjust_brightness(imgHeight, imgWidth, pixelArray, brightness_value);
+            break;
+
+        case 11: /* Contrast */
+            adjust_contrast(imgHeight, imgWidth, pixelArray, contrast_factor);
+            break;
+
+        case 12: /* Pixelate */
+            pixelate(imgHeight, imgWidth, pixelArray, pixelate_block);
+            break;
+
+        default:
+            break;
     }
 }
 
-
 // ------------------------------------------------------
-//  Template placeholder
+// Apply template (stub)
 // ------------------------------------------------------
 void backend_apply_template(int templateID)
 {
-    // Currently disabled
     (void)templateID; // suppress unused warning
 }
 
-
 // ------------------------------------------------------
-//  Get image dimensions
+// Get image dimensions
 // ------------------------------------------------------
 int backend_get_width()  { return imgWidth; }
 int backend_get_height() { return imgHeight; }
+
+// ------------------------------------------------------
+// Free pixel buffer (call on shutdown)
+// ------------------------------------------------------
+void backend_free(void) {
+    if (!pixelArray) return;
+    for (int i = 0; i < imgHeight; i++) free(pixelArray[i]);
+    free(pixelArray);
+    pixelArray = NULL;
+    imgWidth = imgHeight = 0;
+}
+
