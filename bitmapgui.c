@@ -28,7 +28,8 @@ static Rectangle rightPanel  = {1040, 40, 250, 640};
 // Filter and Template lists
 static const char *filterOptions[] = {
     "Resize", "Rotate 90°", "Rotate 180°", "Flip Horizontal",
-    "Flip Vertical", "Grayscale", "Invert"
+    "Flip Vertical", "Grayscale", "Invert", "Sepia",
+    "Blur", "Edges", "Brightness", "Contrast", "Pixelate"
 };
 static int filterCount = sizeof(filterOptions)/sizeof(filterOptions[0]);
 static int selectedFilter = -1;
@@ -58,10 +59,41 @@ int main() {
 
     while (!WindowShouldClose()) {
 
+        // ---------------- TAB NAVIGATION ----------------
         if (IsKeyPressed(KEY_TAB)) {
             textBoxActive++;
             if (currentScreen == LOGIN_SCREEN && textBoxActive > 1) textBoxActive = 0;
             if (currentScreen == SIGNUP_SCREEN && textBoxActive > 2) textBoxActive = 0;
+        }
+
+        // ---------------- ENTER KEY NAVIGATION ----------------
+        if (IsKeyPressed(KEY_ENTER)) {
+            textBoxActive++;
+            if (currentScreen == LOGIN_SCREEN) {
+                if (textBoxActive > 1) textBoxActive = 0;
+                // Auto-login if both fields filled
+                if (username[0] && password[0]) {
+                    if (login(username, password)) {
+                        strcpy(loggedInUser, username);
+                        currentScreen = MAIN_SCREEN;
+                    }
+                }
+            }
+            if (currentScreen == SIGNUP_SCREEN) {
+                if (textBoxActive > 2) textBoxActive = 0;
+                // Auto-signup if all fields filled and passwords match
+                if (username[0] && password[0] && confirmPassword[0]) {
+                    if (strcmp(password, confirmPassword) == 0) {
+                        if (signup(username, password)) {
+                            currentScreen = LOGIN_SCREEN;
+                            strcpy(username, "");
+                            strcpy(password, "");
+                            strcpy(confirmPassword, "");
+                            textBoxActive = 0;
+                        }
+                    }
+                }
+            }
         }
 
         BeginDrawing();
@@ -101,15 +133,15 @@ int main() {
         case SIGNUP_SCREEN:
             DrawText("Sign Up", 330, 50, 30, DARKPURPLE);
 
-            DrawText("Username:", 200, 120, 20, BLACK);
+            DrawText("Username:", 150, 120, 20, BLACK);
             if (GuiTextBox((Rectangle){350, 115, 250, 30}, username, 32, textBoxActive == 0))
                 textBoxActive = 0;
 
-            DrawText("Password:", 200, 170, 20, BLACK);
+            DrawText("Password:", 150, 170, 20, BLACK);
             if (GuiTextBox((Rectangle){350, 165, 250, 30}, password, 32, textBoxActive == 1))
                 textBoxActive = 1;
 
-            DrawText("Confirm Password:", 200, 220, 20, BLACK);
+            DrawText("Confirm Password:", 150, 220, 20, BLACK);
             if (GuiTextBox((Rectangle){350, 215, 250, 30}, confirmPassword, 32, textBoxActive == 2))
                 textBoxActive = 2;
 
@@ -132,7 +164,7 @@ int main() {
             // Top bar
             DrawRectangle(0, 0, screenWidth, 36, LIGHTGRAY);
             DrawText("BMT Image Project", 12, 8, 14, DARKBLUE);
-            DrawText(loggedInUser, 650, 8, 14, BLACK);
+            DrawText(loggedInUser, screenWidth - 150, 8, 14, BLACK); // username top-right
 
             // ---------------- LEFT PANEL ----------------
             DrawRectangleRec(leftPanel, Fade(DARKGRAY, 0.08f));
@@ -146,18 +178,23 @@ int main() {
 
             // Load Button
             if (GuiButton((Rectangle){ rightPanel.x + 8, rightPanel.y + 110, rightPanel.width - 16, 30 }, "Load")) {
-                if (backend_load_image(pathInput)) { // returns true if loaded successfully
-                    // Apply the selected filter immediately after loading
-                    if (selectedFilter >= 0) {
-                        backend_apply_filter(selectedFilter); // selectedFilter is the index from GUI
-        
-                    }
+                if (backend_load_image(pathInput)) { 
+                    if (selectedFilter >= 0) backend_apply_filter(selectedFilter);
                     backend_save_image("output.bmp"); 
                 } else {
                     DrawText("Failed to load image!", rightPanel.x + 8, rightPanel.y + 150, 14, RED);
                 }
             }
 
+            // ---------------- LOGOUT BUTTON ----------------
+            if (GuiButton((Rectangle){ screenWidth - 120, screenHeight - 50, 100, 40 }, "Logout")) {
+                strcpy(loggedInUser, "");
+                currentScreen = LOGIN_SCREEN;
+                strcpy(username, "");
+                strcpy(password, "");
+                strcpy(confirmPassword, "");
+                textBoxActive = 0;
+            }
 
             // ---------------- CENTER PANEL ----------------
             DrawRectangleRec(centerPanel, Fade(DARKGRAY, 0.02f));
@@ -187,12 +224,6 @@ int main() {
                 if (GuiButton(item, filterOptions[i])) {
                     selectedFilter = i;
                     selectedTemplate = -1;
-
-                    // ======================================================
-                    //   BACKEND: APPLY FILTER
-                    // ======================================================
-                    // backend_apply_filter(i);
-                    // ======================================================
                 }
 
                 if (i == selectedFilter) {
@@ -220,12 +251,6 @@ int main() {
                 if (GuiButton(item, templateOptions[i])) {
                     selectedTemplate = i;
                     selectedFilter = -1;
-
-                    // ======================================================
-                    //   BACKEND: APPLY TEMPLATE
-                    // ======================================================
-                    // backend_apply_template(i);
-                    // ======================================================
                 }
 
                 if (i == selectedTemplate) {
