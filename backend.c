@@ -409,7 +409,50 @@ void backend_apply_filter(int filterID) {
 
 void backend_apply_template(int templateID)
 {
-    (void)templateID;
+    if (!pixelArray) return;
+
+    int targetSize = 0; // square PFP
+
+    switch(templateID)
+    {
+        case 0: // Facebook PFP
+            targetSize = 180;  // 180x180 recommended
+            break;
+
+        case 1: // Instagram PFP
+            targetSize = 320;  // 320x320 recommended
+            break;
+
+        case 2: // YouTube PFP
+            targetSize = 800;  // 800x800 recommended
+            break;
+
+        case 3: // Twitter PFP
+            targetSize = 400;  // 400x400 recommended
+            break;
+
+        case 4: // TikTok PFP
+            targetSize = 200;  // 200x200 recommended
+            break;
+
+        case 5: // Snapchat PFP
+            targetSize = 320;  // 320x320 recommended
+            break;
+
+        case 6: // LinkedIn PFP
+            targetSize = 400;  // 400x400 recommended
+            break;
+
+        default:
+            printf("Unknown template ID %d\n", templateID);
+            return;
+    }
+
+    // Apply resize to square
+    if (targetSize > 0)
+    {
+        resize_contiguous(&imgHeight, &imgWidth, &pixelArray, targetSize, targetSize);
+    }
 }
 // =====================================================
 //  GETTERS
