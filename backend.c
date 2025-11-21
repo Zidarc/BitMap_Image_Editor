@@ -192,6 +192,7 @@ void adjust_brightness(int h, int w, RGBTRIPLE img[h][w], int b) {
             img[i][j].rgbtGreen = clamp(img[i][j].rgbtGreen + b);
             img[i][j].rgbtBlue  = clamp(img[i][j].rgbtBlue + b);
         }
+    backend_save_image("resized.bmp");
 }
 
 // contrast
@@ -204,10 +205,7 @@ void adjust_contrast(int h, int w, RGBTRIPLE img[h][w], float f) {
         }
 }
 
-void backend_apply_template(int templateID)
-{
-    (void)templateID;
-}
+
 
 // pixelate
 void pixelate(int h, int w, RGBTRIPLE img[h][w], int block) {
@@ -276,28 +274,53 @@ void rotate_90_contiguous(int *h, int *w, RGBTRIPLE **buf_ptr) {
     int oldH = *h, oldW = *w;
     int newH = oldW, newW = oldH;
 
-    RGBTRIPLE *newbuf = malloc((size_t)newH * newW * sizeof(RGBTRIPLE));
+    RGBTRIPLE *newbuf = malloc((size_t)newW * newH * sizeof(RGBTRIPLE));
     if (!newbuf) return;
 
-    for (int i=0;i<oldH;i++)
-        for (int j=0;j<oldW;j++) {
-            /* pixel at (i,j) goes to (j, newW-1-i) */
+    for (int i = 0; i < oldH; i++)
+        for (int j = 0; j < oldW; j++)
             newbuf[j * newW + (newW - 1 - i)] = (*buf_ptr)[i * oldW + j];
-        }
 
     free(*buf_ptr);
     *buf_ptr = newbuf;
-    *h = newH; *w = newW;
+    *h = newH;
+    *w = newW;
+
+    // Update headers
+    int padding = (4 - ((newW * sizeof(RGBTRIPLE)) % 4)) % 4;
+    infoheader.biWidth = newW;
+    infoheader.biHeight = newH;
+    infoheader.biSizeImage = (sizeof(RGBTRIPLE) * newW + padding) * newH;
+    fileheader.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + infoheader.biSizeImage;
 }
 
-/* rotate 180 in-place on contiguous buffer */
-void rotate_180_contiguous(int h, int w, RGBTRIPLE *buf) {
-    for (int i=0;i<h/2;i++)
-        for (int j=0;j<w;j++) {
-            RGBTRIPLE tmp = buf[i*w + j];
-            buf[i*w + j] = buf[(h-1-i)*w + (w-1-j)];
-            buf[(h-1-i)*w + (w-1-j)] = tmp;
+/* rotate 180 in-place on contiguous buffer, updates headers and saves */
+void rotate_180_contiguous(int *h, int *w, RGBTRIPLE **buf_ptr) {
+    int H = *h;
+    int W = *w;
+    RGBTRIPLE *buf = *buf_ptr;
+
+    for (int i = 0; i < H / 2; i++)
+        for (int j = 0; j < W; j++) {
+            RGBTRIPLE tmp = buf[i * W + j];
+            buf[i * W + j] = buf[(H - 1 - i) * W + (W - 1 - j)];
+            buf[(H - 1 - i) * W + (W - 1 - j)] = tmp;
         }
+
+    // If height is odd, reverse the middle row
+    if (H % 2 != 0) {
+        int mid = H / 2;
+        for (int j = 0; j < W / 2; j++) {
+            RGBTRIPLE tmp = buf[mid * W + j];
+            buf[mid * W + j] = buf[mid * W + (W - 1 - j)];
+            buf[mid * W + (W - 1 - j)] = tmp;
+        }
+    }
+
+    // Headers remain same dimensions for 180 rotation
+    int padding = (4 - ((W * sizeof(RGBTRIPLE)) % 4)) % 4;
+    infoheader.biSizeImage = (sizeof(RGBTRIPLE) * W + padding) * H;
+    fileheader.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + infoheader.biSizeImage;
 }
 
 /* resize using nearest-neighbour, returns new buffer and updates headers */
@@ -343,14 +366,13 @@ void backend_apply_filter(int filterID) {
             }
             break;
 
-        case 0:
+        case 0: // Rotate 90 degrees
             rotate_90_contiguous(&imgHeight, &imgWidth, &pixelArray);
             break;
 
-        case 1:
-            rotate_180_contiguous(imgHeight, imgWidth, pixelArray);
+        case 1: // Rotate 180 degrees
+            rotate_180_contiguous(&imgHeight, &imgWidth, &pixelArray);
             break;
-
         case 2:
             reflect(imgHeight, imgWidth, (RGBTRIPLE(*)[imgWidth])pixelArray);
             break;
@@ -385,7 +407,10 @@ void backend_apply_filter(int filterID) {
     }
 }
 
-
+void backend_apply_template(int templateID)
+{
+    (void)templateID;
+}
 // =====================================================
 //  GETTERS
 // =====================================================
