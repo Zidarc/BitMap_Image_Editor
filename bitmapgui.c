@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include "backend.h"   // Image loading/saving
 #include "login.h"     // Login/signup
-#include "filters.h"   // Filters like brightness, resize, etc.
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
