@@ -234,32 +234,37 @@ void pixelate(int h, int w, RGBTRIPLE img[h][w], int block) {
 }
 
 // blur
-void blur(int h, int w, RGBTRIPLE img[h][w]) {
-    RGBTRIPLE *tmp = malloc((size_t)h * w * sizeof(RGBTRIPLE));
+void blur(int h, int w, RGBTRIPLE *img)
+{
+    RGBTRIPLE *tmp = malloc(h * w * sizeof(RGBTRIPLE));
     if (!tmp) return;
-
-    for (int i=0;i<h;i++)
-        for (int j=0;j<w;j++) {
-            int r=0,g=0,b=0,c=0;
-            for (int di=-1; di<=1; di++)
-                for (int dj=-1; dj<=1; dj++) {
-                    int ni=i+di, nj=j+dj;
-                    if (ni>=0 && nj>=0 && ni<h && nj<w) {
-                        RGBTRIPLE *p = &img[ni][nj];
-                        r += p->rgbtRed;
-                        g += p->rgbtGreen;
-                        b += p->rgbtBlue;
-                        c++;
-                    }
+    for (int i = 0; i < h; i++)
+    {
+        for (int j = 0; j < w; j++)
+        {
+            int r=0, g=0, b=0, c=0;
+            for (int di = -1; di <= 1; di++)
+            for (int dj = -1; dj <= 1; dj++)
+            {
+                int ni = i + di, nj = j + dj;
+                if (ni >= 0 && nj >= 0 && ni < h && nj < w)
+                {
+                    RGBTRIPLE *p = &img[ni*w + nj];
+                    r += p->rgbtRed;
+                    g += p->rgbtGreen;
+                    b += p->rgbtBlue;
+                    c++;
                 }
-            tmp[i*w + j].rgbtRed = c? r/c:0;
-            tmp[i*w + j].rgbtGreen = c? g/c:0;
-            tmp[i*w + j].rgbtBlue = c? b/c:0;
+            }
+            tmp[i*w + j].rgbtRed   = r / c;
+            tmp[i*w + j].rgbtGreen = g / c;
+            tmp[i*w + j].rgbtBlue  = b / c;
         }
-
-    memcpy(img, tmp, (size_t)h*w*sizeof(RGBTRIPLE));
+    }
+    memcpy(img, tmp, h*w*sizeof(RGBTRIPLE));
     free(tmp);
 }
+
 
 
 
@@ -389,7 +394,7 @@ void backend_apply_filter(int filterID) {
             sepia(imgHeight, imgWidth, (RGBTRIPLE(*)[imgWidth])pixelArray);
             break;
         case 7:
-            blur(imgHeight, imgWidth, (RGBTRIPLE(*)[imgWidth])pixelArray);
+            blur(imgHeight, imgWidth, (RGBTRIPLE*)pixelArray);
             break;
 
         case 11:
