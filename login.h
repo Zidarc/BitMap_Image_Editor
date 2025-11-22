@@ -1,4 +1,5 @@
 
+#ifndef LOGIN_H
 #define LOGIN_H
 #define LOGIN_OK 0
 #define LOGIN_USERNAME_EXISTS 1
@@ -10,3 +11,4 @@ int login(const char *username, const char *password);
 int encrypt(char *dest, const char *src);
 int decrypt(char *dest, const char *src);
 
+#endif // LOGIN_H

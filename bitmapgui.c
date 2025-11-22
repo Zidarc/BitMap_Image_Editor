@@ -88,7 +88,7 @@ int main() {
             if(currentScreen==LOGIN_SCREEN) {
                 textBoxActive++;
                 if(textBoxActive>1) textBoxActive=0;
-                if(username[0] && password[0] && login(username,password)) {
+                if(username[0] && password[0] && login(username,password) == LOGIN_OK) {
                     strcpy(loggedInUser,username);
                     currentScreen=MAIN_SCREEN;
                 }
@@ -120,7 +120,7 @@ int main() {
                 GuiTextBox((Rectangle){320,195,250,30}, password,32,textBoxActive==1);
 
                 if(GuiButton((Rectangle){320,250,100,40},"Login")) {
-                    if(username[0] && password[0] && login(username,password)) {
+                    if(username[0] && password[0] && login(username,password)== LOGIN_OK) {
                         strcpy(loggedInUser,username);
                         currentScreen=MAIN_SCREEN;
                     }
@@ -145,7 +145,7 @@ int main() {
                 GuiTextBox((Rectangle){350,215,250,30}, confirmPassword,32,textBoxActive==2);
 
                 if(GuiButton((Rectangle){350,320,100,40},"Sign Up")) {
-                    if(strcmp(password,confirmPassword)==0 && signup(username,password)) {
+                    if(strcmp(password,confirmPassword)==0 && signup(username,password) == LOGIN_OK) {
                         currentScreen=LOGIN_SCREEN;
                         strcpy(username,""); strcpy(password,""); strcpy(confirmPassword,""); textBoxActive=0;
                     }
