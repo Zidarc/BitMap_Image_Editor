@@ -1,4 +1,3 @@
-// Replace your backend.c with this corrected version (keeps your filters mostly intact)
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -48,12 +47,6 @@ void backend_set_resize(int newWidth, int newHeight) {
 static inline int clamp(int value) {
     return (value < 0) ? 0 : (value > 255) ? 255 : value;
 }
-
-/* access pixel at row r, col c */
-static inline RGBTRIPLE *px(int r, int c) {
-    return &pixelArray[r * imgWidth + c];
-}
-
 
 // =====================================================
 //  LOAD BMP (now into contiguous buffer)
@@ -192,7 +185,7 @@ void adjust_brightness(int h, int w, RGBTRIPLE img[h][w], int b) {
             img[i][j].rgbtGreen = clamp(img[i][j].rgbtGreen + b);
             img[i][j].rgbtBlue  = clamp(img[i][j].rgbtBlue + b);
         }
-    backend_save_image("resized.bmp");
+    backend_save_image("output.bmp");
 }
 
 // contrast

@@ -15,6 +15,7 @@ int encrypt(char *dest, const char *src) {
         i++;
     }
     dest[i*2] = '\0'; // null terminate
+    
 }
 
 // Decrypt password: decode hex + XOR
