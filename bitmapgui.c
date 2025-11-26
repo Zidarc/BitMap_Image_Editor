@@ -47,6 +47,11 @@ static char newHeightInput[8] = "";
 static int newWidth = 0;
 static int newHeight = 0;
 
+// ---------------------- Error Pop-up ----------------------
+static bool showErrorPopup = false;
+static char errorMessage[256] = "";
+static int errorTimer = 0;
+
 // ---------------------- Main ----------------------
 int main() {
     InitWindow(screenWidth, screenHeight, "BMT Image Project");
@@ -66,6 +71,12 @@ int main() {
     // Scrolls
     static Vector2 filterScroll = {0};
     static Vector2 tempScroll = {0};
+
+    // Error pop-up timer (auto-hide after 3 seconds)
+    if (errorTimer > 0) {
+        errorTimer--;
+        if (errorTimer == 0) showErrorPopup = false;
+    }
 
     while (!WindowShouldClose()) {
 
@@ -96,9 +107,24 @@ int main() {
                 }
 
                 if(GuiButton((Rectangle){320,250,100,40},"Login")) {
-                    if(username[0] && password[0] && login(username,password) == LOGIN_OK) {
-                        strcpy(loggedInUser,username);
-                        currentScreen=MAIN_SCREEN;
+                    if(username[0] == '\0' || password[0] == '\0') {
+                        strcpy(errorMessage, "Please enter both username and password");
+                        showErrorPopup = true;
+                        errorTimer = 180; // 3 seconds at 60 FPS
+                    } else {
+                        int result = login(username, password);
+                        if(result == LOGIN_OK) {
+                            strcpy(loggedInUser,username);
+                            currentScreen=MAIN_SCREEN;
+                        } else if(result == LOGIN_INVALID_CREDENTIALS) {
+                            strcpy(errorMessage, "Invalid username or password");
+                            showErrorPopup = true;
+                            errorTimer = 180;
+                        } else if(result == LOGIN_FILE_ERROR) {
+                            strcpy(errorMessage, "Error accessing user database");
+                            showErrorPopup = true;
+                            errorTimer = 180;
+                        }
                     }
                 }
                 if(GuiButton((Rectangle){430,250,150,40},"Sign Up")) {
@@ -127,9 +153,28 @@ int main() {
                 }
 
                 if(GuiButton((Rectangle){350,320,100,40},"Sign Up")) {
-                    if(strcmp(password,confirmPassword)==0 && signup(username,password) == LOGIN_OK) {
-                        currentScreen=LOGIN_SCREEN;
-                        strcpy(username,""); strcpy(password,""); strcpy(confirmPassword,""); textBoxActive=0;
+                    if(username[0] == '\0' || password[0] == '\0' || confirmPassword[0] == '\0') {
+                        strcpy(errorMessage, "Please fill in all fields");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else if(strcmp(password, confirmPassword) != 0) {
+                        strcpy(errorMessage, "Passwords do not match");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else {
+                        int result = signup(username, password);
+                        if(result == LOGIN_OK) {
+                            currentScreen=LOGIN_SCREEN;
+                            strcpy(username,""); strcpy(password,""); strcpy(confirmPassword,""); textBoxActive=0;
+                        } else if(result == LOGIN_USERNAME_EXISTS) {
+                            strcpy(errorMessage, "Username already exists");
+                            showErrorPopup = true;
+                            errorTimer = 180;
+                        } else if(result == LOGIN_FILE_ERROR) {
+                            strcpy(errorMessage, "Error accessing user database");
+                            showErrorPopup = true;
+                            errorTimer = 180;
+                        }
                     }
                 }
                 if(GuiButton((Rectangle){460,320,100,40},"Back")) currentScreen=LOGIN_SCREEN;
@@ -153,8 +198,14 @@ int main() {
                            brightnessInput, 8, mainTextBoxActive==0);
                 if(GuiButton((Rectangle){leftPanel.x+8,leftPanel.y+110,leftPanel.width-16,30},"Apply")){
                     brightnessValue = atoi(brightnessInput);
-                    backend_set_brightness(brightnessValue);
-                    backend_apply_filter(11); // Brightness
+                    if(brightnessValue < -255 || brightnessValue > 255) {
+                        strcpy(errorMessage, "Brightness must be between -255 and 255");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else {
+                        backend_set_brightness(brightnessValue);
+                        backend_apply_filter(11); // Brightness
+                    }
                 }
 
                 // Resize
@@ -168,7 +219,15 @@ int main() {
                 if(GuiButton((Rectangle){leftPanel.x+8,leftPanel.y+270,leftPanel.width-16,30},"Apply")){
                     newWidth = atoi(newWidthInput);
                     newHeight = atoi(newHeightInput);
-                    if(newWidth>0 && newHeight>0){
+                    if(newWidthInput[0] == '\0' || newHeightInput[0] == '\0') {
+                        strcpy(errorMessage, "Please enter both width and height");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else if(newWidth <= 0 || newHeight <= 0) {
+                        strcpy(errorMessage, "Width and height must be greater than 0");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else {
                         backend_set_resize(newWidth,newHeight);
                         backend_apply_filter(13); // Resize
                     }
@@ -187,15 +246,29 @@ int main() {
 
                 // Load button
                 if(GuiButton((Rectangle){rightPanel.x+8, rightPanel.y+110, rightPanel.width-16, 30}, "Load")){
-                    if(backend_load_image(pathInput)) selectedFilter=-1;
+                    if(pathInput[0] == '\0') {
+                        strcpy(errorMessage, "Please enter an image path");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else if(!backend_load_image(pathInput)) {
+                        strcpy(errorMessage, "Failed to load image. Check if file exists and is a valid 24-bit BMP");
+                        showErrorPopup = true;
+                        errorTimer = 180;
+                    } else {
+                        selectedFilter=-1;
+                    }
                 }
 
                 // Save button (hard-coded to output.bmp)
-                if(GuiButton((Rectangle){rightPanel.x+8, rightPanel.y+150, rightPanel.width-16, 30}, "Edit")){
-                    if(backend_save_image("output.bmp")) {
-                        printf("Image saved as output.bmp\n"); // Optional console feedback
+                if(GuiButton((Rectangle){rightPanel.x+8, rightPanel.y+150, rightPanel.width-16, 30}, "Save")){
+                    if(!backend_save_image("output.bmp")) {
+                        strcpy(errorMessage, "Failed to save image. Make sure an image is loaded first");
+                        showErrorPopup = true;
+                        errorTimer = 180;
                     } else {
-                        printf("Failed to save image\n");
+                        strcpy(errorMessage, "Image saved successfully as output.bmp");
+                        showErrorPopup = true;
+                        errorTimer = 180;
                     }
                 }
 
@@ -230,9 +303,16 @@ int main() {
                 for(int i=0;i<filterCount;i++){
                     Rectangle item={filterView.x, filterView.y+i*40+(int)filterScroll.y, filterView.width,40};
                     if(GuiButton(item,filterOptions[i])){
-                        selectedFilter=i;
-                        selectedTemplate=-1;
-                        backend_apply_filter(selectedFilter);
+                        // Check if image is loaded before applying filter
+                        if(backend_get_width() == 0 || backend_get_height() == 0) {
+                            strcpy(errorMessage, "Please load an image first");
+                            showErrorPopup = true;
+                            errorTimer = 180;
+                        } else {
+                            selectedFilter=i;
+                            selectedTemplate=-1;
+                            backend_apply_filter(selectedFilter);
+                        }
                     }
                     if(i==selectedFilter) DrawRectangleRec(item, Fade(DARKGRAY,0.4f));
                 }
@@ -259,6 +339,32 @@ int main() {
                 EndScissorMode();
 
             } break;
+        }
+
+        // ---------------- ERROR POP-UP ----------------------
+        if(showErrorPopup) {
+            Rectangle popupRect = {screenWidth/2 - 250, screenHeight/2 - 80, 500, 180};
+            
+            // Draw semi-transparent background overlay
+            DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.5f));
+            
+            // Draw popup box
+            DrawRectangleRec(popupRect, RAYWHITE);
+            DrawRectangleLinesEx(popupRect, 3, RED);
+            
+            // Draw title
+            DrawText("Error", popupRect.x + 20, popupRect.y + 10, 24, RED);
+            DrawLine(popupRect.x + 10, popupRect.y + 40, popupRect.x + popupRect.width - 10, popupRect.y + 40, LIGHTGRAY);
+            
+            // Draw error message (simple display - Raylib handles long text)
+            DrawText(errorMessage, popupRect.x + 20, popupRect.y + 55, 18, BLACK);
+            
+            // OK button
+            Rectangle okButton = {popupRect.x + popupRect.width/2 - 50, popupRect.y + popupRect.height - 40, 100, 30};
+            if(GuiButton(okButton, "OK")) {
+                showErrorPopup = false;
+                errorTimer = 0;
+            }
         }
 
         EndDrawing();
