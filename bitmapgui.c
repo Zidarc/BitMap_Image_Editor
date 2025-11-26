@@ -69,37 +69,10 @@ int main() {
 
     while (!WindowShouldClose()) {
 
-        // ---------------- TAB NAVIGATION ----------------
+        // ---------------- TAB NAVIGATION (Main screen only) ----------------
         if (IsKeyPressed(KEY_TAB)) {
-            if(currentScreen==LOGIN_SCREEN) {
-                textBoxActive++;
-                if(textBoxActive>1) textBoxActive=0;
-            } else if(currentScreen==SIGNUP_SCREEN) {
-                textBoxActive++;
-                if(textBoxActive>2) textBoxActive=0;
-            } else if(currentScreen==MAIN_SCREEN) {
+            if(currentScreen==MAIN_SCREEN) {
                 mainTextBoxActive = (mainTextBoxActive + 1) % 4;
-            }
-        }
-
-        // ---------------- ENTER NAVIGATION ----------------
-        if (IsKeyPressed(KEY_ENTER)) {
-            if(currentScreen==LOGIN_SCREEN) {
-                textBoxActive++;
-                if(textBoxActive>1) textBoxActive=0;
-                if(username[0] && password[0] && login(username,password)) {
-                    strcpy(loggedInUser,username);
-                    currentScreen=MAIN_SCREEN;
-                }
-            } else if(currentScreen==SIGNUP_SCREEN) {
-                textBoxActive++;
-                if(textBoxActive>2) textBoxActive=0;
-                if(username[0] && password[0] && confirmPassword[0] && strcmp(password,confirmPassword)==0) {
-                    if(signup(username,password)) {
-                        currentScreen=LOGIN_SCREEN;
-                        strcpy(username,""); strcpy(password,""); strcpy(confirmPassword,""); textBoxActive=0;
-                    }
-                }
             }
         }
 
@@ -113,13 +86,17 @@ int main() {
                 DrawText("Login", 350,50,30,DARKGREEN);
 
                 DrawText("Username:",200,150,20,BLACK);
-                GuiTextBox((Rectangle){320,145,250,30}, username,32,textBoxActive==0);
+                if(GuiTextBox((Rectangle){320,145,250,30}, username,32,textBoxActive==0)) {
+                    textBoxActive = 0;
+                }
 
                 DrawText("Password:",200,200,20,BLACK);
-                GuiTextBox((Rectangle){320,195,250,30}, password,32,textBoxActive==1);
+                if(GuiTextBox((Rectangle){320,195,250,30}, password,32,textBoxActive==1)) {
+                    textBoxActive = 1;
+                }
 
                 if(GuiButton((Rectangle){320,250,100,40},"Login")) {
-                    if(username[0] && password[0] && login(username,password)) {
+                    if(username[0] && password[0] && login(username,password) == LOGIN_OK) {
                         strcpy(loggedInUser,username);
                         currentScreen=MAIN_SCREEN;
                     }
@@ -135,16 +112,22 @@ int main() {
                 DrawText("Sign Up", 330,50,30,DARKPURPLE);
 
                 DrawText("Username:",150,120,20,BLACK);
-                GuiTextBox((Rectangle){350,115,250,30}, username,32,textBoxActive==0);
+                if(GuiTextBox((Rectangle){350,115,250,30}, username,32,textBoxActive==0)) {
+                    textBoxActive = 0;
+                }
 
                 DrawText("Password:",150,170,20,BLACK);
-                GuiTextBox((Rectangle){350,165,250,30}, password,32,textBoxActive==1);
+                if(GuiTextBox((Rectangle){350,165,250,30}, password,32,textBoxActive==1)) {
+                    textBoxActive = 1;
+                }
 
                 DrawText("Confirm Password:",150,220,20,BLACK);
-                GuiTextBox((Rectangle){350,215,250,30}, confirmPassword,32,textBoxActive==2);
+                if(GuiTextBox((Rectangle){350,215,250,30}, confirmPassword,32,textBoxActive==2)) {
+                    textBoxActive = 2;
+                }
 
                 if(GuiButton((Rectangle){350,320,100,40},"Sign Up")) {
-                    if(strcmp(password,confirmPassword)==0 && signup(username,password)) {
+                    if(strcmp(password,confirmPassword)==0 && signup(username,password) == LOGIN_OK) {
                         currentScreen=LOGIN_SCREEN;
                         strcpy(username,""); strcpy(password,""); strcpy(confirmPassword,""); textBoxActive=0;
                     }
