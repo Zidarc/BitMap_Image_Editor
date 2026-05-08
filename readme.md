@@ -1,57 +1,77 @@
-# BMP Image Editing Tool
+# BMP Image Editor (PF Lab Project)
 
-## 📘 Introduction
-The **BMP Image Editing Tool** is a GUI application designed to open, edit, and save BMP images. It allows users to apply simple image processing techniques with minimal effort through a user-friendly GUI interface.
-
----
-
-## 🧩 Existing System
-Existing image editing systems, such as **Photoshop**, **GIMP**, and built-in editors, are designed with advanced and professional-level features. They provide powerful tools such as filters, layering, and support for multiple image formats, making them suitable for expert use.
+A lightweight GUI tool for opening, editing, and saving BMP images. This project was built in C as a Programming Fundamentals (PF) lab project at FAST NU KHI using **raylib** and **raygui** for the interface.
 
 ---
 
-## ⚠️ Problem Statement
-Although these tools are efficient, they are often too complex for beginners and require significant system resources.
+## 📌 Project Overview
+
+The BMP Image Editor focuses on beginner-friendly image manipulation features without the complexity of full-scale editors like Photoshop or GIMP. It provides a simple workflow to load a BMP file, apply edits, preview changes, and save the output.
 
 ---
 
-## 💡 Proposed Solution
-The proposed solution is to develop a **GUI-based BMP Image Editing Tool**.  
-It will support common editing functions such as:
-- Grayscale
+## ✅ Key Features
+
+- Open and save **.bmp** images
+- Grayscale filter
 - Brightness adjustment
 - Color inversion
-- Cropping
-- Resizing
-- Flipping
-
-Additionally, the system will incorporate:
-- A **user login system** to track user-specific history.
-- **Ready-made templates** for resizing images according to popular social media formats.
-
----
-
-## 🌟 Salient Features
-- Open and save BMP images  
-- Apply a grayscale filter  
-- Adjust brightness  
-- Invert colors  
-- Crop and resize images  
-- Flip images horizontally and vertically *(optional)*  
-- GUI for ease of use  
+- Crop and resize
+- Horizontal/vertical flipping *(optional)*
+- Simple GUI controls for all operations
 
 ### 🔐 Login System
-- User creation and secure login  
-- Each user’s edit history (paths of edited images) will be stored and retrievable  
+
+- Create/login users
+- Track edited image paths per user
 
 ### 📱 Social Media Templates
-- Predefined resizing options for popular platforms (e.g., **Instagram profile picture**, **Instagram post**, **Facebook post**, etc.)  
-- Ensures easy export of images to correct specifications  
+
+- Quick resizing for popular formats (Instagram profile, Instagram post, Facebook post, etc.)
 
 ---
 
-## 🛠️ Tools & Technologies
-- **Programming Language:** C  
-- **Operating System:** Windows  
+## 🖼️ Screenshots
+
+> **Placeholder:** Add a screenshot of the main editor window.
+
+![Main Editor Screenshot](Images/placeholder-main-editor.png)
+
+> **Placeholder:** Add a screenshot of an edit result.
+
+![Edit Result Screenshot](Images/placeholder-edit-result.png)
 
 ---
+
+## 🧰 Tools & Technologies
+
+- **Language:** C
+- **GUI:** raylib + raygui
+- **OS:** Windows
+
+---
+
+## 🚀 Build & Run
+
+> The project is compiled with GCC and linked against raylib.
+
+```bash
+gcc -o bmt.exe backend.c bitmapgui.c login.c -I"C:/raylib/raylib/src" -L"C:/raylib/raylib/src" -lraylib -lopengl32 -lgdi32 -lwinmm -luser32
+```
+
+---
+
+## 📂 Repository Structure
+
+- `backend.c` / `backend.h` — core image processing functions
+- `bitmapgui.c` — GUI rendering and interaction logic
+- `login.c` / `login.h` — user login and history tracking
+- `Images/` — image assets (add screenshots here)
+- `Testing files/` — sample inputs
+
+---
+
+## 📎 Notes
+
+- Only BMP format is supported.
+- Use the `Images/` folder to store screenshots referenced above.
