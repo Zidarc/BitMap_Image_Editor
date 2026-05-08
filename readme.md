@@ -33,13 +33,8 @@ The BMP Image Editor focuses on beginner-friendly image manipulation features wi
 
 ## 🖼️ Screenshots
 
-> **Placeholder:** Add a screenshot of the main editor window.
-
-![Main Editor Screenshot](Images/placeholder-main-editor.png)
-
-> **Placeholder:** Add a screenshot of an edit result.
-
-![Edit Result Screenshot](Images/placeholder-edit-result.png)
+- **Placeholder:** [Main Editor Screenshot goes here]
+- **Placeholder:** [Edit Result Screenshot goes here]
 
 ---
 
