@@ -122,11 +122,3 @@ Suggested next steps (issues to fix): `edges` implementation, implement `backend
 - Ali Hussain
 - Muhammad Talha — https://github.com/Muhammad-Talha-25k2500
 
----
-
-If you'd like, I can also:
-- Add example screenshots to `Images/` and embed them here
-- Fix `backend_free` and implement missing `edges` filter
-- Create a Makefile or batch script for builds
-
-Tell me which of these you'd like next.
